@@ -9,7 +9,7 @@ from spdx.version import Version
 from spdx.writers.json import write_document
 
 from ..._version import __version__
-from ..dists import PackageDistInfo
+from ..sources.dist_info import PackageDistInfo
 
 
 def make_spdx_id(value: str) -> str:
@@ -17,8 +17,13 @@ def make_spdx_id(value: str) -> str:
 
 
 hashlib_to_checksum_alg = {
-    # TODO: Add all supported hash algorithms.
+    # TODO: Add more supported hash algorithms.
+    "sha224": ChecksumAlgorithm.SHA224,
     "sha256": ChecksumAlgorithm.SHA256,
+    "sha512": ChecksumAlgorithm.SHA512,
+    "sha3_256": ChecksumAlgorithm.SHA3_256,
+    "sha3_384": ChecksumAlgorithm.SHA3_384,
+    "sha3_512": ChecksumAlgorithm.SHA3_512,
 }
 
 
@@ -44,27 +49,18 @@ class SpdxJsonFormatter:
             package.spdx_id = make_spdx_id(f"Package-{package.name}-{package.version}")
             package.primary_package_purpose = PackagePurpose.LIBRARY
 
-            # Pull information from the dist contained in the provenance_info.json
-            if dist_info.provenance_url:
-                provenance_url = dist_info.provenance_url
-                hashes = provenance_url["archive_info"]["hashes"]
-
+            if dist_info.download_url:
                 # Set the download URL for the distribution.
-                package.download_location = provenance_url["url"]
-
-                # Add all available checksums.
-                for alg_name, value in sorted(hashes.items()):
-                    if alg_name not in hashlib_to_checksum_alg:
-                        continue
-                    package.set_checksum(
-                        Checksum(
-                            identifier=hashlib_to_checksum_alg[alg_name], value=value
-                        )
-                    )
+                package.download_location = dist_info.download_url
 
                 # Downloaded from PyPI means we can reference the package on PyPI via PURL.
-                if package.download_location.startswith(
-                    "https://files.pythonhosted.org/"
+                if (
+                    package.download_location.startswith(
+                        "https://files.pythonhosted.org/"
+                    )
+                    # Avoid URL authority shenanigans, PyPI doesn't need authentication to download
+                    # and is likely the highest value target for masquerading as an existing project.
+                    and "@" not in package.download_location
                 ):
                     package.add_pkg_ext_refs(
                         ExternalPackageRef(
@@ -75,6 +71,17 @@ class SpdxJsonFormatter:
                     )
             else:
                 package.download_location = "NOASSERTION"
+
+            # Add all available checksums.
+            if dist_info.hashes:
+                for alg_name, value in sorted(dist_info.hashes.items()):
+                    if alg_name not in hashlib_to_checksum_alg:
+                        continue
+                    package.set_checksum(
+                        Checksum(
+                            identifier=hashlib_to_checksum_alg[alg_name], value=value
+                        )
+                    )
 
             document.add_package(package)
 
