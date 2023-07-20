@@ -5,6 +5,7 @@ import sys
 
 from packaging.version import Version
 
+from .formatters.cyclonedx_json import CycloneDxJsonFormatter
 from .formatters.spdx_json import SpdxJsonFormatter
 from .sources import pep710, pip_report
 
@@ -12,6 +13,8 @@ from .sources import pep710, pip_report
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser("pip-sbom")
     parser.add_argument("--source", default="env", choices=["env", "pip"])
+    parser.add_argument("--sbom-format", default="spdx", choices=["spdx", "cyclonedx"])
+    parser.add_argument("--format", default="json", choices=["json"])
     parser.add_argument(
         "--site-packages", default=os.pathsep.join(site.getsitepackages())
     )
@@ -42,13 +45,18 @@ def main(argv: list[str]) -> int:
 
     # Gather distribution information from sources.
     if parsed.source == "pip":
-        dist_infos = pip_report.get_dist_infos(post_argv)
+        dist_infos, returncode = pip_report.get_dist_infos(post_argv)
     elif parsed.source == "env":
         site_packages = parsed.site_packages.split(os.pathsep)
-        dist_infos = pep710.get_dist_infos(site_packages)
+        dist_infos, returncode = pep710.get_dist_infos(site_packages)
     else:
         print("Unknown --source value, must be either 'pip' or 'env'")
         return 1
+
+    # If gathering the distribution information failed we exit with
+    # the code given to us by the gathering function.
+    if returncode:
+        return returncode
 
     # Sort the results so they appear consistently when rendered.
     dist_infos = sorted(dist_infos, key=lambda pdi: (pdi.name, Version(pdi.version)))
@@ -57,7 +65,14 @@ def main(argv: list[str]) -> int:
         print("Didn't find any distribution information from source")
         return 1
 
-    formatter = SpdxJsonFormatter()
+    if parsed.sbom_format == "spdx":
+        formatter = SpdxJsonFormatter()
+    elif parsed.sbom_format == "cyclonedx":
+        formatter = CycloneDxJsonFormatter()
+    else:
+        print("Unknown --sbom-format value, must be one of 'spdx' or 'cyclonedx'")
+        return 1
+
     print(formatter.format(dist_infos))
     return 0
 

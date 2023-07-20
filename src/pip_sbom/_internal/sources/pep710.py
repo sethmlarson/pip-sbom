@@ -45,7 +45,7 @@ def get_dist_info_from_dir(dist_info_dir: str, /) -> PackageDistInfo | None:
     )
 
 
-def get_dist_infos(site_packages: list[str], /) -> list[PackageDistInfo]:
+def get_dist_infos(site_packages: list[str], /) -> tuple[list[PackageDistInfo], int]:
     dist_infos = []
     for site_package in site_packages:
         try:
@@ -62,4 +62,4 @@ def get_dist_infos(site_packages: list[str], /) -> list[PackageDistInfo]:
             if package_dist_info := get_dist_info_from_dir(dist_info_dir):
                 dist_infos.append(package_dist_info)
 
-    return dist_infos
+    return dist_infos, 0

@@ -9,7 +9,7 @@ from packaging.utils import canonicalize_name
 from .dist_info import PackageDistInfo
 
 
-def get_dist_infos(pip_install_args: list[str]) -> list[PackageDistInfo]:
+def get_dist_infos(pip_install_args: list[str]) -> tuple[list[PackageDistInfo], int]:
     proc = subprocess.run(
         [
             sys.executable,
@@ -20,7 +20,6 @@ def get_dist_infos(pip_install_args: list[str]) -> list[PackageDistInfo]:
             "--disable-pip-version-check",
             "--dry-run",
             "--ignore-installed",
-            "--only-binary=:all:",
             "--report",
             "-",
         ]
@@ -30,7 +29,7 @@ def get_dist_infos(pip_install_args: list[str]) -> list[PackageDistInfo]:
     )
     if proc.returncode != 0:
         print(proc.stderr.decode("utf-8"))
-        return []
+        return [], 1
 
     pip_report = json.loads(proc.stdout.decode("utf-8"))
 
@@ -57,4 +56,4 @@ def get_dist_infos(pip_install_args: list[str]) -> list[PackageDistInfo]:
             )
         )
 
-    return dist_infos
+    return dist_infos, 0

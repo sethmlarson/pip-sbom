@@ -1,6 +1,7 @@
 import datetime
 import io
 
+from packageurl import PackageURL
 from spdx.checksum import Checksum, ChecksumAlgorithm
 from spdx.document import Document
 from spdx.license import License
@@ -55,18 +56,21 @@ class SpdxJsonFormatter:
 
                 # Downloaded from PyPI means we can reference the package on PyPI via PURL.
                 if (
-                    package.download_location.startswith(
-                        "https://files.pythonhosted.org/"
-                    )
+                    dist_info.download_url.startswith("https://files.pythonhosted.org/")
                     # Avoid URL authority shenanigans, PyPI doesn't need authentication to download
                     # and is likely the highest value target for masquerading as an existing project.
-                    and "@" not in package.download_location
+                    and "@" not in dist_info.download_url
                 ):
                     package.add_pkg_ext_refs(
                         ExternalPackageRef(
                             category="PACKAGE-MANAGER",
                             pkg_ext_ref_type="purl",
-                            locator=f"pkg:pypi/{package.name}@{dist_info.version}",
+                            locator=PackageURL(
+                                type="pkg",
+                                namespace="pypi",
+                                name=dist_info.name,
+                                version=dist_info.version,
+                            ).to_string(),
                         )
                     )
             else:
