@@ -5,16 +5,17 @@ import sys
 
 from packaging.version import Version
 
-from .formatters.cyclonedx_json import CycloneDxJsonFormatter
-from .formatters.spdx_json import SpdxJsonFormatter
+from .formatters.cyclonedx1_json import CycloneDxJsonFormatter
+from .formatters.spdx2_json import Spdx2JsonFormatter
 from .sources import pep710, pip_report
 
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser("pip-sbom")
     parser.add_argument("--source", default="env", choices=["env", "pip"])
-    parser.add_argument("--sbom-format", default="spdx", choices=["spdx", "cyclonedx"])
-    parser.add_argument("--format", default="json", choices=["json"])
+    parser.add_argument(
+        "--format", default="spdx-2", choices=["spdx-2", "spdx-3", "cyclonedx-1"]
+    )
     parser.add_argument(
         "--site-packages", default=os.pathsep.join(site.getsitepackages())
     )
@@ -65,9 +66,9 @@ def main(argv: list[str]) -> int:
         print("Didn't find any distribution information from source")
         return 1
 
-    if parsed.sbom_format == "spdx":
-        formatter = SpdxJsonFormatter()
-    elif parsed.sbom_format == "cyclonedx":
+    if parsed.format == "spdx-2":
+        formatter = Spdx2JsonFormatter()
+    elif parsed.format == "cyclonedx-1":
         formatter = CycloneDxJsonFormatter()
     else:
         print("Unknown --sbom-format value, must be one of 'spdx' or 'cyclonedx'")

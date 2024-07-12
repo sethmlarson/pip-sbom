@@ -18,7 +18,7 @@ classifiers = [
 ]
 dynamic = ["version", "description"]
 requires-python = ">=3.8"
-dependencies = ["packaging", "spdx-tools", "cyclonedx-python-lib", "pip"]
+dependencies = ["packaging", "spdx-tools>=0.8", "cyclonedx-python-lib", "pip", "packageurl-python"]
 
 [project.scripts]
 pip-sbom = "pip_sbom._internal.cli:cli"
